@@ -1,11 +1,16 @@
-"""Random number generator"""
+"""Megaman AI Testing with Genetic Algorithm"""
+
 import random
+from megaman_action import MegamanAction
 
 class MegamanAITest(object):
     """Test Instance for a run in Megaman X"""
     def __init__(self):
-        starting_action = random.randint(1, 6)
+        # Randomly select a starting action between 1 & 6
+        starting_action = random.randint(MegamanAction.MOVE_RIGHT, MegamanAction.SHOOT)
+        # Initial fitness is 0
         self.fitness = 0
+        # Start out with an initial random action
         self.actions = [(0, starting_action)] # pos, action
 
     def get_actions(self):

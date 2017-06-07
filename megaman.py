@@ -8,13 +8,14 @@ import time
 import urllib2
 
 from threading import Thread, Lock
-from enum import Enum
 from pykeyboard import PyKeyboard
 
+from megaman_action import MegamanAction
 from megaman_ai_test import MegamanAIRunner
 
 import Quartz
 
+# Memory offsets obtained from:
 # http://tasvideos.org/GameResources/SNES/MegaManX/RAMMap.html
 
 def clockms():
@@ -35,33 +36,24 @@ def findwindow(bundleid):
     """Finds a window identified by the provided bundle identifier"""
     return AE.AECreateDesc(AppleEvents.typeApplicationBundleID, bundleid)
 
-class Action(Enum):
-    """Enum of possible actions"""
-    MOVE_RIGHT = 1
-    MOVE_LEFT = 2
-    STOP_MOVEMENT = 3
-    JUMP = 4
-    SHOOT = 5
-    CHARGE = 6
-    DASH = 7
-    CHANGE_WEAPON = 8
-    START = 9
-
 class MegamanAI(object):
     """Class for running the Megaman AI simulation"""
 
     REST = "http://localhost:1993/"
+    BSNES_BUNDLE_ID = "org.bsnes.bsnes-plus"
     LEFT_ARROW = 0x7B
     RIGHT_ARROW = 0x7C
     F4_KEY = 0x76
     DESTINATION_POSITION = 7600
-    MIN_POSITION = 10
+    MIN_POSITION = 100
+    INITIAL_TESTS = 25
 
     def __init__(self):
+        """Constructor"""
         # Create initial AI test suite
         self.prev_position = 0
         self.relevant_update_time = time.time()
-        self.test_suite = MegamanAIRunner(25, self.DESTINATION_POSITION)
+        self.test_suite = MegamanAIRunner(self.INITIAL_TESTS, self.DESTINATION_POSITION)
         self.current_ai_actions = list(self.test_suite.get_current_test().actions)
         # Setup state variables
         self.jumping = False
@@ -70,7 +62,7 @@ class MegamanAI(object):
         # Create keyboard
         self.keyboard = PyKeyboard()
         # Focus the game window
-        sneswindow = findwindow('org.bsnes.bsnes-plus')
+        sneswindow = findwindow(self.BSNES_BUNDLE_ID)
         focuswindow(sneswindow)
         # Sleep briefly to ensure we have the window brought up
         time.sleep(1)
@@ -89,18 +81,6 @@ class MegamanAI(object):
 
     def update_ai(self):
         """Handles AI logic"""
-
-        """print "Do the things"
-        self.queue_action(Action.CHARGE)
-        time.sleep(3)
-        self.queue_action(Action.MOVE_RIGHT)
-        time.sleep(1)
-        self.queue_action(Action.JUMP)
-        time.sleep(3)
-        self.queue_action(Action.SHOOT)
-        self.queue_action(Action.STOP_MOVEMENT)
-        print "Done with the things"
-        """
         print "Starting AI simulation"
         print "Generation 1, Test 1"
         while self.playing_game:
@@ -110,7 +90,7 @@ class MegamanAI(object):
                 if self.current_ai_actions:
                     for index, (req_pos, action) in enumerate(self.current_ai_actions):
                         if req_pos <= position:
-                            action_obj = Action(action)
+                            action_obj = MegamanAction(action)
                             #print "Queueing action " + str(action_obj)
                             self.queue_action(action_obj)
                             del self.current_ai_actions[index]
@@ -172,32 +152,32 @@ class MegamanAI(object):
         self.input_mutex.acquire()
         self.relevant_update_time = time.time()
         try:
-            if action == Action.MOVE_RIGHT:
+            if action == MegamanAction.MOVE_RIGHT:
                 self.send_unhandled_key(self.LEFT_ARROW, False)
                 self.send_unhandled_key(self.RIGHT_ARROW, True)
-            elif action == Action.MOVE_LEFT:
+            elif action == MegamanAction.MOVE_LEFT:
                 self.send_unhandled_key(self.RIGHT_ARROW, False)
                 self.send_unhandled_key(self.LEFT_ARROW, True)
-            elif action == Action.STOP_MOVEMENT:
+            elif action == MegamanAction.STOP_MOVEMENT:
                 self.send_unhandled_key(self.LEFT_ARROW, False)
                 self.send_unhandled_key(self.RIGHT_ARROW, False)
-            elif action == Action.JUMP:
+            elif action == MegamanAction.JUMP:
                 if not self.jumping:
                     self.keyboard.press_key('z')
                     self.jumping = True
-            elif action == Action.SHOOT:
+            elif action == MegamanAction.SHOOT:
                 if self.charged_shot:
                     self.keyboard.release_key('a')
                 else:
                     self.keyboard.tap_key('a')
-            elif action == Action.CHARGE:
+            elif action == MegamanAction.CHARGE:
                 self.keyboard.press_key('a')
                 self.charged_shot = True
-            elif action == Action.DASH:
+            elif action == MegamanAction.DASH:
                 self.keyboard.tap_key('x')
-            elif action == Action.CHANGE_WEAPON:
+            elif action == MegamanAction.CHANGE_WEAPON:
                 self.keyboard.tap_key('c')
-            elif action == Action.START:
+            elif action == MegamanAction.START:
                 self.keyboard.tap_key('return')
             else:
                 print "Unknown action requested: " + str(action)
@@ -268,11 +248,11 @@ class MegamanAI(object):
             current = clockms()
             # do stuff
             if self.is_showing_demo():
-                self.queue_action(Action.START)
-                self.queue_action(Action.START)
-                self.queue_action(Action.START)
-                self.queue_action(Action.START)
-                self.queue_action(Action.START)
+                self.queue_action(MegamanAction.START)
+                self.queue_action(MegamanAction.START)
+                self.queue_action(MegamanAction.START)
+                self.queue_action(MegamanAction.START)
+                self.queue_action(MegamanAction.START)
             self.check_jumping()
             self.check_death()
             self.check_stalled()
