@@ -7,7 +7,7 @@ class MegamanAITest(object):
     """Test Instance for a run in Megaman X"""
     def __init__(self):
         # Randomly select a starting action between 1 & 6
-        starting_action = random.randint(MegamanAction.MOVE_RIGHT, MegamanAction.SHOOT)
+        starting_action = random.randint(MegamanAction.MOVE_RIGHT.value, MegamanAction.SHOOT.value)
         # Initial fitness is 0
         self.fitness = 0
         # Start out with an initial random action
