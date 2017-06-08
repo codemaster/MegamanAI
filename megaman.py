@@ -4,6 +4,7 @@ from Carbon import AE
 
 import Queue
 import struct
+import sys
 import time
 import urllib2
 
@@ -54,6 +55,9 @@ class MegamanAI(object):
         self.prev_position = 0
         self.relevant_update_time = time.time()
         self.test_suite = MegamanAIRunner(self.INITIAL_TESTS, self.DESTINATION_POSITION)
+        if len(sys.argv) > 1:
+            # Attempt to import the provided filename
+            self.test_suite.import_tests(sys.argv[1])
         self.current_ai_actions = list(self.test_suite.get_current_test().actions)
         # Setup state variables
         self.jumping = False
@@ -77,12 +81,16 @@ class MegamanAI(object):
         self.input_thread.daemon = True
         self.input_thread.start()
         # Start AI handling
+        self.test_start_time = time.time()
         self.update_ai()
 
     def update_ai(self):
         """Handles AI logic"""
         print "Starting AI simulation"
-        print "Generation 1, Test 1"
+        gen_num = self.test_suite.current_generation
+        test_num = self.test_suite.current_test + 1
+        print "Generation " + str(gen_num) + ", Test " + str(test_num)
+        self.test_start_time = time.time()
         while self.playing_game:
             try:
                 position = self.x_position()
@@ -222,6 +230,7 @@ class MegamanAI(object):
     def exit_handler(self):
         """Handles exiting the simulation"""
         print "Exiting AI simulation"
+        self.export_tests()
         self.playing_game = False
         self.input_thread.join()
         self.game_thread.join()
@@ -230,6 +239,10 @@ class MegamanAI(object):
             self.input_queue.task_done()
         self.input_queue.join()
         self.clear_inputs()
+
+    def export_tests(self):
+        """Exports the current generation of data to json"""
+        self.test_suite.export_tests(time.strftime("%Y-%m-%d_%H:%M:%S.json", time.gmtime()))
 
     def check_jumping(self):
         """Updates the jumping state if it was previously found to be true"""
@@ -304,12 +317,14 @@ class MegamanAI(object):
     def next_test(self):
         """Goes to the next AI Test"""
         score = self.ai_get_score()
-        print "Restarting | Score was " + str(score)
-        self.test_suite.finish_current_test(score)
+        elapsed_time = time.time() - self.test_start_time
+        print "Restarting | Score = " + str(score) + ", Time = " + str(round(elapsed_time, 2)) + "s"
+        self.test_suite.finish_current_test(score, elapsed_time)
         self.current_ai_actions = list(self.test_suite.get_current_test().actions)
         gen_num = self.test_suite.current_generation
         test_num = self.test_suite.current_test + 1
         print "Generation " + str(gen_num) + ", Test " + str(test_num)
+        self.test_start_time = time.time()
 
     def restart(self):
         """Restarts the game from the quicksave"""

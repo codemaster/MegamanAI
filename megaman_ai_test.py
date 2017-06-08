@@ -1,6 +1,9 @@
 """Megaman AI Testing with Genetic Algorithm"""
 
+import codecs
+import jsonpickle
 import random
+
 from megaman_action import MegamanAction
 
 class MegamanAITest(object):
@@ -10,12 +13,25 @@ class MegamanAITest(object):
         starting_action = random.randint(MegamanAction.MOVE_RIGHT.value, MegamanAction.SHOOT.value)
         # Initial fitness is 0
         self.fitness = 0
+        # Initial time is 0
+        self.time = 0
         # Start out with an initial random action
         self.actions = [(0, starting_action)] # pos, action
 
     def get_actions(self):
         """Obtains the set of actions"""
         return self.actions
+
+class MegamanTestsSerialized(object):
+    """Serialized set of tests"""
+    def __init__(self, generation_num, tests):
+        self.generation = generation_num
+        self.tests = [MegamanTestSerialized(test) for test in tests]
+
+class MegamanTestSerialized(object):
+    """Singular serialized test"""
+    def __init__(self, test):
+        self.actions = test.actions
 
 class MegamanAIRunner(object):
     """Handles creating and running AI tests"""
@@ -34,11 +50,12 @@ class MegamanAIRunner(object):
         """Obtains the currently running test"""
         return self.tests[self.current_test]
 
-    def finish_current_test(self, score):
+    def finish_current_test(self, score, elapsed_time):
         """Finishes the current test with a provided fitness score and move to the next one"""
         # Get the current test and assign the fitness score
         test = self.get_current_test()
         test.fitness = score
+        test.time = elapsed_time
         # Move so that we are on the next test
         self.current_test = self.current_test + 1
         #print "Incrementing to test #" + str(self.current_test)
@@ -73,7 +90,7 @@ class MegamanAIRunner(object):
         if self.have_winner():
             return
         # Selection of the best fit - top 20%
-        self.tests = sorted(self.tests, key=lambda test: test.fitness, reverse=True)
+        self.tests = sorted(self.tests, key=lambda test: (test.fitness, -test.time), reverse=True)
         self.tests = self.tests[:max(int(0.2 * len(self.tests)), 2)]
         #print "Eliminating until we have " + str(len(self.tests)) + " tests"
         # Crossover
@@ -121,3 +138,24 @@ class MegamanAIRunner(object):
                             return
                     # Otherwise, pop in the new action
                     test.actions.append((pos, new_action))
+
+    def export_tests(self, filename):
+        """Exports the current generation and tests to a json file"""
+        with open(filename, 'w') as writefile:
+            serialized_tests = MegamanTestsSerialized(self.current_generation, self.tests)
+            writefile.write(jsonpickle.encode(serialized_tests))
+
+    def import_tests(self, filename):
+        """Imports tests from a json file"""
+        with open(filename, 'r') as readfile:
+            serialized_tests = jsonpickle.decode(readfile.read())
+            if serialized_tests is None:
+                print "Unable to load tests from " + str(filename)
+                return
+            self.current_generation = serialized_tests.generation
+            self.tests = []
+            for test in serialized_tests.tests:
+                new_test = MegamanAITest()
+                new_test.actions = test.actions
+                self.tests.append(new_test)
+            self.current_test = 0
