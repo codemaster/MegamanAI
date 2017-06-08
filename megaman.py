@@ -13,6 +13,8 @@ from pykeyboard import PyKeyboard
 from megaman_action import MegamanAction
 from megaman_ai_test import MegamanAIRunner
 
+from Tkinter import *
+
 import Quartz
 
 # Memory offsets obtained from:
@@ -47,6 +49,7 @@ class MegamanAI(object):
     DESTINATION_POSITION = 7600
     MIN_POSITION = 100
     INITIAL_TESTS = 25
+    SHOW_UI = True
 
     def __init__(self):
         """Constructor"""
@@ -76,6 +79,11 @@ class MegamanAI(object):
         self.input_thread = Thread(target=self.input_handler)
         self.input_thread.daemon = True
         self.input_thread.start()
+        # Show UI windows
+        self.has_ui = self.SHOW_UI
+        self.best_score_so_far = 0
+        self.generation_text = "Generation 1, Test 1"
+        self.ui_show()
         # Start AI handling
         self.update_ai()
 
@@ -97,6 +105,7 @@ class MegamanAI(object):
                             #print str(len(self.current_ai_actions)) + " actions left"
                         else:
                             break
+                self.ui_update()
                 time.sleep(0.2)
             except KeyboardInterrupt:
                 self.exit_handler()
@@ -121,7 +130,7 @@ class MegamanAI(object):
                     self.input_queue.task_done()
                 except Queue.Empty:
                     # empty queue is OK
-                    pass
+                    continue
             # get new time
             after = clockms()
             # if we are under the per-frame budget, wait for the rest
@@ -305,11 +314,13 @@ class MegamanAI(object):
         """Goes to the next AI Test"""
         score = self.ai_get_score()
         print "Restarting | Score was " + str(score)
+        self.best_score_so_far = max(score, self.best_score_so_far)
         self.test_suite.finish_current_test(score)
         self.current_ai_actions = list(self.test_suite.get_current_test().actions)
         gen_num = self.test_suite.current_generation
         test_num = self.test_suite.current_test + 1
-        print "Generation " + str(gen_num) + ", Test " + str(test_num)
+        self.generation_text = "Generation " + str(gen_num) + ", Test " + str(test_num)
+        print self.generation_text
 
     def restart(self):
         """Restarts the game from the quicksave"""
@@ -325,6 +336,30 @@ class MegamanAI(object):
         self.clear_inputs()
         self.relevant_update_time = time.time()
         self.next_test()
+
+    def ui_show(self):
+        """Shows the UI"""
+        self.status_ui = Tk()
+        self.status_label = Label(self.status_ui, text="Generation 888 | Test 8888",
+                                  bg="black", fg="green", font=(None, 18),
+                                  height=1, width=22)
+        self.status_label.pack()
+        self.best_ui = Tk()
+        self.best_label = Label(self.best_ui, text="Best: 999999",
+                                bg="black", fg="green", font=(None, 18),
+                                height=1, width=22)
+        self.best_label.pack()
+        #T.insert(END, "Just a text Widget\nin two lines\n")
+
+    def ui_update(self):
+        """Updates the UI"""
+        if self.has_ui:
+            self.status_label.config(text=self.generation_text)
+            self.best_label.config(text="Best: " + str(self.best_score_so_far))
+            self.status_ui.update_idletasks()
+            self.best_ui.update_idletasks()
+            self.status_ui.update()
+            self.best_ui.update()
 
 if __name__ == "__main__":
     # Create AI system
