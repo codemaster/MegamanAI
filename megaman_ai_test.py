@@ -15,6 +15,8 @@ class MegamanAITest(object):
         self.fitness = 0
         # Initial time is 0
         self.time = 0
+        # Initial life is 0
+        self.life = 0
         # Start out with an initial random action
         self.actions = [(0, starting_action)] # pos, action
 
@@ -50,12 +52,13 @@ class MegamanAIRunner(object):
         """Obtains the currently running test"""
         return self.tests[self.current_test]
 
-    def finish_current_test(self, score, elapsed_time):
+    def finish_current_test(self, score, elapsed_time, life):
         """Finishes the current test with a provided fitness score and move to the next one"""
         # Get the current test and assign the fitness score
         test = self.get_current_test()
         test.fitness = score
         test.time = elapsed_time
+        test.life = life
         # Move so that we are on the next test
         self.current_test = self.current_test + 1
         #print "Incrementing to test #" + str(self.current_test)
@@ -90,7 +93,9 @@ class MegamanAIRunner(object):
         if self.have_winner():
             return
         # Selection of the best fit - top 20%
-        self.tests = sorted(self.tests, key=lambda test: (test.fitness, -test.time), reverse=True)
+        self.tests = sorted(self.tests,
+                            key=lambda test: (test.fitness, -test.time, test.life),
+                            reverse=True)
         self.tests = self.tests[:max(int(0.2 * len(self.tests)), 2)]
         #print "Eliminating until we have " + str(len(self.tests)) + " tests"
         # Crossover

@@ -53,6 +53,7 @@ class MegamanAI(object):
         """Constructor"""
         # Create initial AI test suite
         self.prev_position = 0
+        self.current_health = 0
         self.relevant_update_time = time.time()
         self.test_suite = MegamanAIRunner(self.INITIAL_TESTS, self.DESTINATION_POSITION)
         if len(sys.argv) > 1:
@@ -282,7 +283,8 @@ class MegamanAI(object):
 
     def check_death(self):
         """Checks if X died. Load the save state!"""
-        if self.health() <= 0:
+        self.current_health = self.health()
+        if self.current_health <= 0:
             #print "X died!"
             #print "Score was " + str(self.ai_get_score())
             #print "Restarting"
@@ -318,8 +320,10 @@ class MegamanAI(object):
         """Goes to the next AI Test"""
         score = self.ai_get_score()
         elapsed_time = time.time() - self.test_start_time
-        print "Restarting | Score = " + str(score) + ", Time = " + str(round(elapsed_time, 2)) + "s"
-        self.test_suite.finish_current_test(score, elapsed_time)
+        print ("Restarting | Score = " + str(score) +
+               ", Time = " + str(round(elapsed_time, 2)) + "s" +
+               ", Life = " + str(self.current_health))
+        self.test_suite.finish_current_test(score, elapsed_time, self.current_health)
         self.current_ai_actions = list(self.test_suite.get_current_test().actions)
         gen_num = self.test_suite.current_generation
         test_num = self.test_suite.current_test + 1
