@@ -1,8 +1,7 @@
 """Megaman AI Testing with Genetic Algorithm"""
 
-import codecs
-import jsonpickle
 import random
+import jsonpickle
 
 from megaman_action import MegamanAction
 
